@@ -15,6 +15,16 @@ from torch.utils.data.dataloader import default_collate
 from torchvision.transforms.functional import InterpolationMode
 
 
+class IntSortImageFolder(torchvision.datasets.ImageFolder):
+    def find_classes(self, directory):
+        classes = sorted([entry.name for entry in os.scandir(directory) if entry.is_dir()], key=lambda x: int(x))
+        if not classes:
+            raise FileNotFoundError(f"Couldn't find any class folder in {directory}.")
+
+        class_to_idx = {cls_name: i for i, cls_name in enumerate(classes)}
+        return classes, class_to_idx
+
+
 def train_one_epoch(model, criterion, optimizer, data_loader, device, epoch, args, model_ema=None, scaler=None):
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
@@ -134,7 +144,7 @@ def load_data(traindir, valdir, args):
         random_erase_prob = getattr(args, "random_erase", 0.0)
         ra_magnitude = getattr(args, "ra_magnitude", None)
         augmix_severity = getattr(args, "augmix_severity", None)
-        dataset = torchvision.datasets.ImageFolder(
+        dataset = IntSortImageFolder(
             traindir,
             presets.ClassificationPresetTrain(
                 crop_size=train_crop_size,
@@ -166,7 +176,7 @@ def load_data(traindir, valdir, args):
                 crop_size=val_crop_size, resize_size=val_resize_size, interpolation=interpolation
             )
 
-        dataset_test = torchvision.datasets.ImageFolder(
+        dataset_test = IntSortImageFolder(
             valdir,
             preprocessing,
         )
@@ -209,7 +219,12 @@ def main(args):
     dataset, dataset_test, train_sampler, test_sampler = load_data(train_dir, val_dir, args)
 
     collate_fn = None
-    num_classes = len(dataset.classes)
+
+    if args.num_classes:
+        num_classes = args.num_classes
+    else:
+        num_classes = len(dataset.classes)
+
     mixup_transforms = []
     if args.mixup_alpha > 0.0:
         mixup_transforms.append(transforms.RandomMixup(num_classes, p=1.0, alpha=args.mixup_alpha))
@@ -386,6 +401,7 @@ def get_args_parser(add_help=True):
 
     parser.add_argument("--data-path", default="/datasets01/imagenet_full_size/061417/", type=str, help="dataset path")
     parser.add_argument("--model", default="resnet18", type=str, help="model name")
+    parser.add_argument("--num-classes", default=1000, type=int, help="num of classes")
     parser.add_argument("--device", default="cuda", type=str, help="device (Use cuda or cpu Default: cuda)")
     parser.add_argument(
         "-b", "--batch-size", default=32, type=int, help="images per gpu, the total batch size is $NGPU x batch_size"
