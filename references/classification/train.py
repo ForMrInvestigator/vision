@@ -328,6 +328,7 @@ def main(args):
     if args.distributed:
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
         model_without_ddp = model.module
+        print("DDP initialized.")
 
     model_ema = None
     if args.model_ema:

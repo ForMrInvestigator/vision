@@ -247,9 +247,6 @@ def init_distributed_mode(args):
         args.rank = int(os.environ["RANK"])
         args.world_size = int(os.environ["WORLD_SIZE"])
         args.gpu = int(os.environ["LOCAL_RANK"])
-        print(
-            f"set distributed args from env (rank: {args.rank} {int(os.environ['RANK'])} world_size: {args.world_size} {int(os.environ['WORLD_SIZE'])})"
-        )
     elif "SLURM_PROCID" in os.environ:
         args.rank = int(os.environ["SLURM_PROCID"])
         args.gpu = args.rank % torch.cuda.device_count()
