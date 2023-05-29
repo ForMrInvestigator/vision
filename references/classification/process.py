@@ -150,8 +150,7 @@ def preprocess(
 
 
 def postprocess(checkpoint_pth, export_file):
-    # model = torchvision.models.get_model("mobilenet_v2", num_classes=1000)
-    model = torchvision.models.get_model("mobilenet_v2", weights=weights)
+    model = torchvision.models.get_model("mobilenet_v2", num_classes=1000)
     checkpoint = torch.load(
         checkpoint_pth,
         map_location="cpu",
