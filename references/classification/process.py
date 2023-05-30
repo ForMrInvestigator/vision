@@ -6,7 +6,8 @@ import PIL
 import io
 import subprocess
 import json
-
+import torchvision
+import torch
 
 def preprocess(
         raw_video_basedir,
