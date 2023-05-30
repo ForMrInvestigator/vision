@@ -3,3 +3,5 @@ RUN apt-get -y update && apt-get -y upgrade && DEBIAN_FRONTEND=noninteractive TZ
     apt-get install -y --no-install-recommends \
     ffmpeg
 RUN pip install labelme
+WORKDIR /app/vision
+ADD . .

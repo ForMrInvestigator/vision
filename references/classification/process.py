@@ -9,18 +9,20 @@ import json
 
 
 def preprocess(
-    raw_video_basedir,
-    frame_output_basedir,
-    mobilenet_train_data_output_basedir,
-    merges=[],
+        raw_video_basedir,
+        frame_output_basedir,
+        mobilenet_train_data_output_basedir,
+        train_base_dir,
+        merges=[],
 ):
     videos = []
+    # probing videos frame rate etc.
     for raw_file in os.listdir(raw_video_basedir):
         raw_file_abs = os.sep.join([raw_video_basedir, raw_file])
         if (
-            os.path.isfile(raw_file_abs)
-            and not raw_file.startswith(".")
-            and (raw_file.endswith(".mp4") or raw_file.endswith(".MOV"))
+                os.path.isfile(raw_file_abs)
+                and not raw_file.startswith(".")
+                and (raw_file.endswith(".mp4") or raw_file.endswith(".MOV"))
         ):
             ffprobe = [
                 "ffprobe",
@@ -53,6 +55,7 @@ def preprocess(
     videos = sorted(videos, key=lambda x: x[0])
     names = {}
     i = -1
+    # handle target merge
     for raw_file_abs, _, _ in videos:
         short_name = raw_file_abs.split("/")[-1].split(".")[0]
         i += 1
@@ -64,7 +67,7 @@ def preprocess(
                 print(short_name, merge_name, a)
                 names[short_name] = a
                 i = a
-
+    # extract frame
     for raw_file_abs, frames, frame_rate in videos:
         short_name = raw_file_abs.split("/")[-1].split(".")[0]
         merged_name = str(names[short_name])
@@ -90,13 +93,13 @@ def preprocess(
         out, err = process.communicate()
         if err:
             print(err.decode(), process.returncode)
-
+    # split dataset
     for klass in os.listdir(frame_output_basedir):
         klass_abs = os.sep.join([frame_output_basedir, klass])
         if (
-            os.path.isdir(klass_abs)
-            and not klass.startswith(".")
-            and (klass != "val" or klass != "train")
+                os.path.isdir(klass_abs)
+                and not klass.startswith(".")
+                and (klass != "val" or klass != "train" or klass != "mobilenet")
         ):
             targets = []
             for target in os.listdir(klass_abs):
@@ -112,13 +115,13 @@ def preprocess(
                     image.save(target)
                     targets.append(target)
                 if (
-                    os.path.isfile(target_abs)
-                    and not target.startswith(".")
-                    and (
+                        os.path.isfile(target_abs)
+                        and not target.startswith(".")
+                        and (
                         target.lower().endswith(".png")
                         or target.lower().endswith(".jpg")
                         or target.lower().endswith(".jpeg")
-                    )
+                )
                 ):
                     targets.append(target_abs)
             vals = random.sample(targets, int(len(targets) * 0.3))
@@ -146,6 +149,24 @@ def preprocess(
                     train_abs,
                     os.sep.join([train_klass_path, train_abs.split(os.sep)[-1]]),
                 )
+    # setup symlink
+    for train_base_source in os.listdir(os.sep.join([train_base_dir, 'train'])):
+        if int(train_base_source) not in set(names.values()):
+            train_base_source_abs = os.sep.join([train_base_dir, 'train', train_base_source])
+            train_base_target_abs = os.sep.join(
+                [mobilenet_train_data_output_basedir, "train", train_base_source]
+            )
+            if not os.path.exists(train_base_target_abs):
+                os.symlink(train_base_source_abs, train_base_target_abs)
+
+    for train_base_source in os.listdir(os.sep.join([train_base_dir, 'val'])):
+        if int(train_base_source) not in set(names.values()):
+            train_base_source_abs = os.sep.join([train_base_dir, 'val', train_base_source])
+            train_base_target_abs = os.sep.join(
+                [mobilenet_train_data_output_basedir, "val", train_base_source]
+            )
+            if not os.path.exists(train_base_target_abs):
+                os.symlink(train_base_source_abs, train_base_target_abs)
     print(names)
 
 
@@ -175,6 +196,7 @@ def get_args_parser(add_help=True):
     parser.add_argument("--raw_video_basedir", type=str)
     parser.add_argument("--frame_output_basedir", type=str)
     parser.add_argument("--mobilenet_train_data_output_basedir", type=str)
+    parser.add_argument("--train_base", default="/train/imagenet1k_mini", type=str)
     parser.add_argument("--merges", default=[], action="append", nargs="+")
     parser.add_argument("--checkpoint_pth", type=str)
     parser.add_argument("--export_file", type=str)
@@ -193,6 +215,7 @@ if __name__ == "__main__":
             raw_video_basedir=args.raw_video_basedir,
             frame_output_basedir=args.frame_output_basedir,
             mobilenet_train_data_output_basedir=args.mobilenet_train_data_output_basedir,
+            train_base_dir=args.train_base,
             merges=args.merges
         )
     elif args.mode == "post":
