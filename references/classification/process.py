@@ -15,6 +15,7 @@ def preprocess(
         mobilenet_train_data_output_basedir,
         train_base_dir,
         merges=[],
+        expects=[]
 ):
     videos = []
     # probing videos frame rate etc.
@@ -23,7 +24,8 @@ def preprocess(
         if (
                 os.path.isfile(raw_file_abs)
                 and not raw_file.startswith(".")
-                and (raw_file.endswith(".mp4") or raw_file.endswith(".MOV"))
+                and (raw_file.lower().endswith(".mp4") or raw_file.lower().endswith(".mov"))
+                and raw_file not in expects
         ):
             ffprobe = [
                 "ffprobe",
@@ -199,6 +201,7 @@ def get_args_parser(add_help=True):
     parser.add_argument("--mobilenet_train_data_output_basedir", type=str)
     parser.add_argument("--train_base", default="/train/imagenet1k_mini", type=str)
     parser.add_argument("--merges", default=[], action="append", nargs="+")
+    parser.add_argument("--expects", default=[], nargs="*")
     parser.add_argument("--checkpoint_pth", type=str)
     parser.add_argument("--export_file", type=str)
     parser.add_argument(
@@ -217,7 +220,8 @@ if __name__ == "__main__":
             frame_output_basedir=args.frame_output_basedir,
             mobilenet_train_data_output_basedir=args.mobilenet_train_data_output_basedir,
             train_base_dir=args.train_base,
-            merges=args.merges
+            merges=args.merges,
+            expects=args.expects
         )
     elif args.mode == "post":
         postprocess(checkpoint_pth=args.checkpoint_pth, export_file=args.export_file)
