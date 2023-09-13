@@ -224,9 +224,9 @@ def postprocess(
     subprocess.run(cmds)
 
     # Save the json and params
-    with open(os.path.join(export_build_path, "graph.json"), "w") as f_graph:
+    with open(os.path.join(export_build_path, "graph.json"), "w+") as f_graph:
         f_graph.write(factory.get_graph_json())
-    with open(os.path.join(export_build_path, "graph.params"), "wb") as f_params:
+    with open(os.path.join(export_build_path, "graph.params"), "wb+") as f_params:
         f_params.write(runtime.save_param_dict(factory.get_params()))
 
 
